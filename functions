@@ -1,0 +1,257 @@
+<?php
+//Include Custom Theme Options 
+//Disable Failed login Notifications
+
+function wrong_login() {
+
+  return 'Wrong username or password.';
+
+}
+
+add_filter('login_errors', 'wrong_login');
+
+
+//Add Footer Menu
+
+add_action( 'init', 'register_footer_menu' );
+
+add_action( 'twg_footer_inside', 'add_footer_menu' );
+
+
+
+function twg_footer_inside() {
+
+	do_action('twg_footer_inside');
+
+}
+
+
+function register_footer_menu() {
+
+  register_nav_menu('footer-menu',__( 'Footer Menu' ));
+
+}
+
+function add_footer_menu() {
+
+  wp_nav_menu( array('theme_location' => 'footer-menu', 'menu_class' => 'twg-footer-menu', 'container_id' => 'footer-id-1' ) );
+
+}
+
+
+/********************************************
+
+	make a widget to store social media links
+
+********************************************/
+
+require_once "includes/social_media_widget.php";
+
+
+
+add_action( 'widgets_init', function(){
+
+     register_widget('Social_Media_Links_Widget');
+
+});
+
+
+
+/********************************************
+
+	make a widget to store fooret contact info content
+
+********************************************/
+
+require_once "includes/contact_info.php";
+
+
+
+add_action( 'widgets_init', function(){
+
+     register_widget('Contact_Info');
+
+});
+
+
+
+add_action('woo_header_inside','home_page_div',11);
+
+function home_page_div(){?>	
+
+<div id="header-right">
+	<div id="search-box">		
+
+		<form method="get" class="searchform" action="<?php echo home_url( '/' ); ?>" >	
+
+			<input type="text" class="field s" name="s" value="<?php _e( 'Search Keyword', 'woothemes' ); ?>" onfocus="if (this.value == '<?php _e( 'Search Keyword', 'woothemes' ); ?>') {this.value = '';}" onblur="if (this.value == '') {this.value = '<?php _e( 'Search Keyword', 'woothemes' ); ?>';}" />		<?php if ( isset( $woo_options['woo_header_search_scope'] ) && $woo_options['woo_header_search_scope'] == 'products' && is_woocommerce_activated() ) { echo '<input type="hidden" name="post_type" value="product" />'; } ?>		<i class="icon-search"></i>	
+
+		</form>  	
+
+	</div>	
+
+</div>
+
+<?php
+
+}	
+
+
+
+/*
+
+ *********************************************************** 
+
+			Customise first page content
+
+ ***********************************************************
+
+ */
+
+
+
+add_action('wp','home_page_top_content',10);
+
+function home_page_top_content(){
+
+	if(is_page("home")){
+
+		//on home display the default post
+
+		add_action('woo_header_after','show_home_post',10);
+
+	}
+
+}
+
+//function to split strings into sepereate words to get "HVAC"
+
+function splitIt($s){
+
+            $arr = array('.',',');
+
+            $s = str_replace($arr," ",$s);
+
+            $s = preg_replace("/( )+/", " ", $s);
+
+            $s = preg_replace("/^( )+/", "", $s);
+
+            $s = preg_replace("/( )+$/", "", $s);
+
+            $tokens = explode(" ",$s);
+
+            return $tokens;
+
+        }
+
+ //Show home banner post with featured image as the background
+
+function show_home_post(){
+
+	$post_id=43;
+
+	$queried_post=get_post($post_id);
+
+	$title=$queried_post->post_title;
+
+	$split=splitIt($title);
+
+	$content=$queried_post->post_content;
+
+	$temp='<div class="header_post_content">';
+
+	for($i=0;$i<count($split);$i++){
+
+		if($i==2 || $i==3){
+
+			$temp.='<span class="g">'.$split[$i].'</span>';
+
+			$temp.=' ';
+
+		}
+
+		
+
+		if($i==4 || $i==5){
+
+			$temp.='<span class="r">'.$split[$i].'</span>';
+
+			$temp.=' ';
+
+		}
+
+		if($i==0 || $i==6) {
+
+			$temp.=$split[$i];
+
+			$temp.=' ';
+
+		}
+
+		if($i==1) {
+
+			$temp.=$split[$i];
+
+			$temp.=', ';
+
+		}
+
+	
+
+	}
+
+	$temp.='<div id="discover_more"><a href="'.$content.'"><img src="/wp-content/themes/FrameworkFoundation/images/discover_more.png"/></a></div>';
+
+	$temp.='</div>';
+
+	$image= wp_get_attachment_image_src(get_post_thumbnail_id($post_id),'full');
+
+	
+
+	?>
+
+	<div id="home_top_content" style="background: url('<?php echo $image[0] ?>')">
+
+		<?php echo $temp ?>
+
+	</div>
+
+
+
+<?php
+
+}
+
+
+
+//show banner bar above footer on all the pages
+
+add_action('woo_footer_top','footer_before_banner',1);
+
+function footer_before_banner(){
+
+	$post_id=59;
+
+	$queried_post=get_post($post_id);
+
+	$title=$queried_post->post_title;
+
+	$content_original=$queried_post->post_content;
+
+	$c=explode(';', $content_original);
+
+	$desc=$c[0];
+
+	$call_us_now=$c[1];
+
+	$dir = get_stylesheet_directory_uri();
+
+	?>
+
+		<div class="footer_banner"><div id="left_content"><img src='<?php echo $dir ?>/images/footer_banner_logo.png' alt="logo"/><h1><?php echo $title ?></h1><p><?php echo $desc ?></p></div><div id="right_content"><p id="call_us_now"><?php echo $call_us_now ?></p></div></div><div id="footer-widgets-container">
+
+	<?php
+
+}
+
+?>
