@@ -1,0 +1,269 @@
+<?php
+add_action("admin_menu", "rev_special_image_admin_menu");
+add_action("admin_head", "rev_special_image_admin_head");
+
+
+add_action("wp_ajax_weekly_delete", "weekly_delete");
+add_action("wp_ajax_weekly_update", "weekly_update");
+
+add_shortcode('rev_weekly_special', 'display_weekly_Special');
+
+function weekly_delete() {
+    global $wpdb;
+
+    $data = $_REQUEST;
+    unset($data['action']);
+
+    $wpdb->delete($wpdb->prefix . "weekly_special", array('id' => $_REQUEST['id']));
+    echo admin_url('?page=weekly-special');
+    die;
+}
+function weekly_update() {
+    global $wpdb;
+
+    $data = $_REQUEST;
+    unset($data['action']);
+
+    $wpdb->update($wpdb->prefix . "weekly_special", $data, array('id' => $_REQUEST['id']));
+    echo admin_url('?page=weekly-special');
+    die;
+}
+
+function rev_special_image_admin_head() {
+    wp_enqueue_script('jquery');
+    wp_enqueue_script('jquery-ui-core');
+    wp_enqueue_script('jquery-ui-datepicker');
+    wp_enqueue_script('rev-weekly--admin-ui-timepicker', plugins_url() . "/rev_special_image/js/timepicker.js", false);
+    wp_enqueue_script('rev-weekly--admin-ui-custom', plugins_url() . "/rev_special_image/js/custom.js", false);
+    wp_enqueue_style('rev_weekly-admin-ui-css', 'http://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.1/themes/ui-lightness/jquery-ui.min.css', false);
+}
+
+function rev_special_image_admin_menu() {
+    add_menu_page('rev-special-image', 'Weekly Special', 'upload_files', 'weekly-special', 'rev_special_admin_page');
+}
+
+function rev_special_admin_page() {
+    global $wpdb;
+
+    $error = "";
+    echo '<div class="wrap">';
+
+// Check user permissions before showing options page
+    if (!current_user_can('upload_files')) {
+
+        wp_die('You do not have sufficient permissions to access this page.');
+    }
+
+    if ($_REQUEST['action'] == "wp_handle_upload") {
+        if (weekly_special_images_upload() === true) {
+            $error = "";
+        } else {
+            $error = "Something went wrong. Please try again later.";
+        }
+    }
+
+
+    weekly_special_images_admin($error);
+    weekly_special_images_list();
+
+
+    echo '</div>';
+}
+
+function weekly_special_images_list() {
+    global $wpdb;
+    ?>
+    <form method="post" action="">
+        <input type="hidden" name="action" value="update_frontpageslide_images" />
+
+
+        <table class="widefat" cellspacing="0">
+            <thead>
+                <tr>
+                    <th scope="col" class="homepage-slideshow-image-custom-width">Image / Text</th>
+                    <th scope="col">Url</th>
+                    <th scope="col">Start Date</th>
+                    <th scope="col">End  Date</th>
+                    <th scope="col" class="custom-width-buttons"></th>
+                </tr>
+            </thead>
+
+            <tfoot>
+                <tr>
+                    <th scope="col" class="homepage-slideshow-image-custom-width">Image / Text</th>
+                    <th scope="col">Url</th>
+                    <th scope="col">Start Date</th>
+                    <th scope="col">End  Date</th>
+                    <th scope="col" class="custom-width-buttons"></th>
+                </tr>
+            </tfoot>
+
+            <tbody class="sortable">
+                <?php
+                $weekly_images = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "weekly_special ORDER BY start_date");
+                foreach ($weekly_images as $weekly_image):
+                    ?>
+                    <tr>
+                        <td class="homepage-slideshow-image-custom-width">
+                            <?php if ($weekly_image->image_path) : ?>
+                                <img src="<?php echo site_url() . stripslashes($weekly_image->image_path); ?>" width="286" height="170"  />
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <input type="text" name="url_<?php echo $weekly_image->id; ?>" 
+                                   value="<?php echo stripslashes($weekly_image->url); ?>" class="custom-url" />
+                            <label><?php //echo $weekly_image->start_date;   ?></label>
+                        </td>
+                        <td>
+                            <input type="text" name="start_date_<?php echo $weekly_image->id; ?>" 
+                                   value="<?php echo stripslashes($weekly_image->start_date); ?>" class="custom-date custom-start_date" />
+                            <label><?php //echo $weekly_image->start_date;   ?></label>
+                        </td>
+                        <td>
+                            <input type="text" name="end_date_<?php echo $weekly_image->id; ?>" 
+                                   value="<?php echo stripslashes($weekly_image->end_date); ?>" class="custom-date custom-end_date" />
+                            <label><?php //echo $weekly_image->end_date; //$end->format('Y-m-d H:i:s');      ?></label>
+                        </td>
+
+                        <td class="custom-width-buttons">
+
+                            <a href="" data-id="<?php echo $weekly_image->id; ?>" class="button-primary button update_special" >
+                                Update
+                            </a>
+                            <a href="" data-id="<?php echo $weekly_image->id; ?>" class="button delete_special" >
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+
+            </tbody>
+        </table>
+
+
+    </form>
+
+    <?php
+}
+
+function weekly_special_images_upload() {
+
+    date_default_timezone_set('Pacific/Auckland');
+    global $wpdb;
+    $upload = wp_handle_upload($_FILES['slideshow_image'], 0);
+
+    if (isset($upload['url']) && $upload['url'] != "") {
+
+        $dbPath = str_replace(site_url(), "", $upload['url']);
+
+        $start = new DateTime($_REQUEST['start_date']);
+        $startDate = $start->format('Y-m-d H:i:s');
+
+        $end = new DateTime($_REQUEST['end_date']);
+        $endDate = $end->format('Y-m-d H:i:s');
+
+        $url = $_REQUEST['url'];
+
+        $data = array('image_path' => $dbPath, 'start_date' => $startDate, 'end_date' => $endDate, 'url' => $url);
+        $wpdb->insert($wpdb->prefix . "weekly_special", $data);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function weekly_special_images_admin($error) {
+
+    global $wpdb;
+//    $category_array = $this->convert_categories_to_array();
+//    $category_ids = $category_array['category_ids'];
+//    $category_titles = $category_array['category_titles'];
+    ?>
+    <h2>Add a New Image</h2>
+    <?php if ($error != ""): ?>
+        <p class="error"><?php echo $error; ?></p>
+    <?php endif; ?>
+    <form enctype="multipart/form-data" method="post" action="" >	
+        <table class="form-table">
+            <tr valign="top">
+                <th scope="row">
+                    <input type="hidden" name="action" value="wp_handle_upload" />
+                    <label for="slideshow_image">Image Location</label>
+                </th>
+                <td>
+                    <input type="file" name="slideshow_image" id="slideshow_image" />
+                    <p class="description">Images will be resized to fit automatically. Ideal size is 504px wide by 230px high.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Link Url</th>
+                <td>
+                    <input type="text" name="url" id="url" value="" class="custom-long-text" />
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Start Date</th>
+                <td>
+                    <input type="text" name="start_date" id="start_date" value="" class="custom-long-text" />
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">end Date</th>
+                <td>
+                    <input type="text" name="end_date" id="end_date" value="" class="custom-long-text" />
+                </td>
+            </tr>
+
+        </table>
+        <p class="submit">
+            <input type="submit" class="button-primary" name="html-upload" value="Add Image" />
+        </p>
+    </form>
+    <script>
+                                                            
+        jQuery(document).ready(function() {
+            jQuery('#start_date, #end_date').datetimepicker();
+        });
+                                                            
+    </script>
+
+    <?php
+}
+
+function display_weekly_Special() {
+
+    date_default_timezone_set('Pacific/Auckland');
+
+    global $wpdb;
+    ?>
+    <?php
+    $weekly_images = $wpdb->get_results("SELECT * FROM " . $wpdb->prefix . "weekly_special ORDER BY start_date");
+
+    //var_dump($weekly_images);die;
+
+    foreach ($weekly_images as $key => $weekly_image):
+
+        //var_dump($weekly_image);die;
+
+        $startDate = new DateTime($weekly_image->start_date);
+        $endDate = new DateTime($weekly_image->end_date);
+
+        $now = strtotime(date('d-m-Y H:i:s'));
+
+        if ($now < $endDate->getTimestamp() && $now > $startDate->getTimestamp()) {
+            ?>
+            <div class="weekly_image">
+                <?php if ($weekly_image->url != "") { ?>
+                    <a href="<?php echo $weekly_image->url; ?>" title="">
+                    <?php } ?>
+                    <img  src="<?php echo site_url() . $weekly_image->image_path; ?>"/>
+                    <?php if ($weekly_image->url != "") { ?>
+                    </a>
+                <?php } ?>
+            </div>
+        <?php } ?>
+        <?php
+    endforeach;
+}
+?>
