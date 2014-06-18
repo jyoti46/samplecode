@@ -1,3 +1,95 @@
+<?php
+function retrieve_case_studies_projects() {
+
+$taxonomies=get_taxonomies(); 
+
+	$case_studies_projects = array();
+	$case_studies_categories = get_categories(array('taxonomy' => array('services-provided','industries'), 'orderby' => 'id','order' => 'ASC')); 
+
+	//print_r($case_studies_categories);
+
+	foreach($case_studies_categories as $case_studies_category) {	
+
+		$category_projects = new WP_Query(array('posts_per_page' => -1, 
+
+			'tax_query' => array(
+
+			'relation'=>'OR',
+
+				array(
+
+					'taxonomy' =>'services-provided',
+
+					'field' => 'id',
+
+					'terms' => $case_studies_category->term_id
+
+				),
+
+				array(
+
+					'taxonomy' =>'industries',
+
+					'field' => 'id',
+
+					'terms' => $case_studies_category->term_id
+
+				)
+
+				
+
+			)
+
+		));
+
+//print_r($category_projects);
+
+		if($category_projects->have_posts()) {
+
+
+			$case_studies_projects[$case_studies_category->term_id] = array(
+
+				'id' => (int) $case_studies_category->term_id,
+
+				'title' => $case_studies_category->name,
+
+				'slug' => $case_studies_category->slug,
+
+				'category' =>$case_studies_category->taxonomy
+
+			);
+
+	//print_r($case_studies_projects[$case_studies_category->term_id]);
+
+			while($category_projects->have_posts()) { $category_projects->the_post();
+
+	
+
+				$case_studies_projects[$case_studies_category->term_id]['children'][get_the_ID()] = array(
+
+					'id' => get_the_ID(),
+
+					'title' => get_the_title(),
+
+					'permalink' => get_permalink(get_the_ID())
+
+				);
+
+
+			} // End while
+
+		} wp_reset_postdata(); // End if projects
+
+	} // End categories loop
+
+
+	return $case_studies_projects;
+
+}
+
+?>
+
+
 <script type="text/javascript">
 
 function ShowHide(btn) {
