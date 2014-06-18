@@ -1,0 +1,68 @@
+<script type="text/javascript">
+
+function ShowHide(btn) {
+//Show the clicked div and hide all other divs
+	$(btn).next('.showhide').toggle().siblings('.showhide').hide();
+}
+ 
+</script>
+		
+		<aside>
+<?php
+global $case_studies_projects;
+$last='';
+$i=0;
+$ind='industries';
+$ser='services-provided';
+$first_category = true;
+$first_project = true;
+
+if(!empty($case_studies_projects)) {
+
+	// Loop through the projects array outputting the categories and projects
+	foreach($case_studies_projects as $case_studies_category) {
+	$last = $case_studies_category["category"];
+?>			
+				<?php $i++;//if(strcasecmp($case_studies_category["title"],"Effective Marketing Manager")==0) {?>
+				<?php if(trim($case_studies_category["title"])=='Effective Marketing Manager') {?>
+				<h2>By Services</h2>
+				<?php }?>
+	
+				<?php if(trim($case_studies_category["title"])=='Aged Care') {?>
+				<h2>By Industries</h2>
+				<?php }?>
+							
+				<a class="main-cat" id="div" onclick="ShowHide(this)"><h3><?php echo $case_studies_category["title"]; ?></h3></a>
+				<ul id="sh.<?php echo $i;?>." class="showhide" style="display:none;">
+<?php
+		foreach($case_studies_category["children"] as $case_studies_project) {
+	
+			// If it's the detail page for the current item, or if it's the first project in the first category and we're on the 'Case Studies' page, make the item bold
+			if(is_single($case_studies_project["id"]) || (is_page(13) && $first_category && $first_project)) {
+?>
+					<li><strong><?php echo $case_studies_project["title"]; ?></strong></li>
+<?php
+			} else {
+?>
+					<li><a href="<?php echo $case_studies_project["permalink"]; ?>"><?php echo $case_studies_project["title"]; ?></a></li>
+<?php
+			}
+
+			if($first_project) {
+				$first_project = false;
+			}
+	
+		} // End foreach
+?>
+				</ul>
+				
+<?php
+		if($first_category) {
+			$first_category = false;
+		}
+		
+	} // End foreach
+
+} // End if projects
+?>
+		</aside>
